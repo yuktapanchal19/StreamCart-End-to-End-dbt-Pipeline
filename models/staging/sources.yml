@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: raw_streamcart
+    description: "Raw JSON data received from the StreamCart operational systems."
+
+    schema: RAW_STREAMCART
+
+    tables:
+      - name: raw_orders
+        description: "Stores raw customer order events as nested JSON payloads."
+
+        loaded_at_field: _loaded_at
+
+        freshness:
+          warn_after:
+            count: 120
+            period: hour
+          error_after:
+            count: 168
+            period: hour
+
+        columns:
+          - name: data
+            description: "Nested JSON payload containing customer, order, items, payment and metadata information."
+
+          - name: _loaded_at
+            description: "Timestamp indicating when the record was loaded into the raw table."
+
+          - name: _source
+            description: "Source system from which the order event was ingested."
+
+      - name: raw_products
+        description: "Stores raw product catalog and inventory information as nested JSON payloads."
+
+        columns:
+          - name: data
+            description: "Nested JSON payload containing product, pricing, stock and specification details."
+
+          - name: _loaded_at
+            description: "Timestamp indicating when the product record was loaded."
+
+          - name: _source
+            description: "Source system that supplied the product data."

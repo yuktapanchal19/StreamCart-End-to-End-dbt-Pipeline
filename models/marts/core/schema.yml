@@ -1,0 +1,152 @@
+version: 2
+
+models:
+
+  - name: dim_customers
+
+    description: >
+      Customer-level KPI model containing customer attributes,
+      order activity, revenue metrics, customer segmentation,
+      and ordering history.
+
+    config:
+      meta:
+        owner: 'data-eng@streamcart.com'
+        contains_pii: true
+        refresh_frequency: 'daily'
+
+    columns:
+
+      - name: customer_id
+        description: "Unique identifier for the customer."
+
+      - name: customer_name
+        description: "Customer name."
+
+      - name: email
+        description: "Customer email address."
+
+      - name: phone
+        description: "Customer phone number."
+
+      - name: customer_tier
+        description: "Customer loyalty tier."
+
+      - name: city
+        description: "Customer city."
+
+      - name: country_code
+        description: "Customer country code."
+
+      - name: total_orders
+        description: "Number of successful orders placed by the customer."
+
+      - name: total_gross_revenue
+        description: "Total gross revenue from successful orders."
+
+      - name: total_net_revenue
+        description: "Total net revenue from successful orders."
+
+      - name: avg_order_value
+
+        description: "Average net revenue per successful order."
+
+        tests:
+          - dbt_expectations.expect_column_mean_to_be_between:
+              min_value: 0
+              max_value: 100000
+
+      - name: customer_segment
+        description: "Customer segment based on successful order count."
+
+      - name: days_since_last_order
+        description: "Number of days since the customer's latest order."
+
+
+  - name: fct_orders
+
+    description: "{{ doc('streamcart_pipeline') }}"
+
+    config:
+      meta:
+        owner: 'data-eng@streamcart.com'
+        contains_pii: true
+        refresh_frequency: 'daily'
+
+    columns:
+
+      - name: event_id
+        description: "Source event identifier."
+
+      - name: order_id
+        description: "Customer order identifier."
+
+      - name: customer_id
+        description: "Customer identifier."
+
+      - name: product_id
+        description: "Product identifier."
+
+      - name: order_date
+        description: "Date the order was placed."
+
+      - name: channel
+        description: "Sales channel used for the order."
+
+      - name: currency_code
+        description: "Transaction currency."
+
+      - name: payment_method
+        description: "Payment method used for the order."
+
+      - name: payment_status
+        description: "Payment status of the order."
+
+      - name: quantity
+        description: "Quantity of product ordered."
+
+      - name: unit_price
+        description: "Unit selling price."
+
+      - name: discount_pct
+        description: "Discount percentage applied."
+
+      - name: gross_amount
+        description: "Gross revenue before discount."
+
+      - name: net_amount
+        description: "Net revenue after discount."
+
+      - name: customer_name
+        description: "Customer name."
+
+      - name: customer_tier
+        description: "Customer loyalty tier."
+
+      - name: city
+        description: "Customer city."
+
+      - name: product_name
+        description: "Product name."
+
+      - name: category
+        description: "Product category."
+
+      - name: sub_category
+        description: "Product sub-category."
+
+      - name: brand
+        description: "Product brand."
+
+      - name: margin_pct
+        description: "Product margin percentage."
+
+      - name: is_low_stock
+        description: "Indicates whether inventory is at or below reorder level."
+
+      - name: order_line_key
+        description: "Surrogate key generated from order ID and product ID."
+
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 1000

@@ -1,0 +1,277 @@
+version: 2
+
+models:
+
+  - name: stg_orders
+
+    description: >
+      Cleaned and standardized StreamCart order events. This model parses
+      nested JSON order data, removes test events, deduplicates source
+      records, flattens order items, and derives gross and net amounts.
+
+    columns:
+
+      - name: event_id
+
+        description: >
+          Unique identifier for the source event.
+
+        tests:
+          - unique
+          - not_null
+
+      - name: event_type
+
+        description: >
+          Normalized event type such as order_placed, order_cancelled,
+          add_to_cart, checkout, or page_view.
+
+        tests:
+          - accepted_values:
+              values:
+                - order_placed
+                - order_cancelled
+                - add_to_cart
+                - checkout
+                - page_view
+
+      - name: payment_status
+
+        description: >
+          Normalized payment status for the order.
+
+        tests:
+          - accepted_values:
+              values:
+                - success
+                - failed
+                - pending
+
+      - name: currency_code
+
+        description: >
+          Three-letter currency code associated with the order.
+
+        tests:
+          - accepted_values:
+              values:
+                - INR
+                - USD
+                - GBP
+                - AED
+                - EUR
+
+          - valid_currency
+
+      - name: quantity
+
+        description: >
+          Quantity of the product ordered for the order line item.
+
+        tests:
+          - not_null
+
+      - name: customer_id
+
+        description: >
+          Unique identifier of the customer associated with the order.
+
+        tests:
+          - not_null
+
+      - name: product_id
+
+        description: >
+          Identifier of the product associated with the order line item.
+
+        tests:
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+
+      - name: order_id
+
+        description: >
+          Identifier of the customer order.
+
+      - name: order_date
+
+        description: >
+          Date on which the order was placed.
+
+      - name: customer_name
+
+        description: >
+          Cleaned customer name extracted from the source JSON.
+
+      - name: email
+
+        description: >
+          Lowercase customer email address extracted from the source data.
+
+        tests:
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: '^[a-z0-9._%+-]+@[a-z0-9.-]+[.][a-z]{2,}$'
+
+      - name: net_amount
+
+        description: >
+          Net order-line amount after applying the applicable discount.
+
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1000000
+
+
+  - name: stg_products
+
+    description: >
+      Cleaned and standardized StreamCart product reference data.
+      This model extracts product attributes, pricing, inventory,
+      availability, and derives product margin and low-stock indicators.
+
+    tests:
+
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "list_price >= cost_price"
+
+    columns:
+
+      - name: product_id
+
+        description: >
+          Unique identifier for the product.
+
+        tests:
+          - unique
+          - not_null
+
+      - name: product_name
+
+        description: >
+          Cleaned product name.
+
+      - name: category
+
+        description: >
+          Product category such as Electronics, Apparel, or Home Goods.
+
+      - name: sub_category
+
+        description: >
+          Product sub-category.
+
+      - name: brand
+
+        description: >
+          Product brand.
+
+      - name: list_price
+
+        description: >
+          Current selling price of the product.
+
+      - name: cost_price
+
+        description: >
+          Cost price of the product.
+
+      - name: margin_pct
+
+        description: >
+          Product margin percentage calculated from list price and cost price.
+
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+      - name: qty_on_hand
+
+        description: >
+          Current quantity of the product available in inventory.
+
+      - name: reorder_level
+
+        description: >
+          Inventory level at which the product should be reordered.
+
+
+  # - name: fct_orders
+
+  #   description: >
+  #     Incremental order-line fact table containing customer, product,
+  #     payment, revenue, discount, margin, and inventory information.
+
+  #   tests:
+
+  #     - dbt_expectations.expect_table_row_count_to_be_between:
+  #         min_value: 1000
+
+  # - name: dim_customers
+
+  #   description: >
+  #     Customer-level KPI model containing customer attributes,
+  #     order activity, revenue metrics, segmentation, and ordering history.
+
+  #   columns:
+
+  #     - name: customer_id
+  #       description: >
+  #         Unique identifier for the customer.
+
+  #     - name: customer_name
+  #       description: >
+  #         Customer name.
+
+  #     - name: email
+  #       description: >
+  #         Customer email address.
+
+  #     - name: phone
+  #       description: >
+  #         Customer phone number.
+
+  #     - name: customer_tier
+  #       description: >
+  #         Customer loyalty tier.
+
+  #     - name: city
+  #       description: >
+  #         Customer city.
+
+  #     - name: country_code
+  #       description: >
+  #         Two-letter customer country code.
+
+  #     - name: total_orders
+  #       description: >
+  #         Number of successful orders placed by the customer.
+
+  #     - name: total_gross_revenue
+  #       description: >
+  #         Total gross revenue generated by successful orders.
+
+  #     - name: total_net_revenue
+  #       description: >
+  #         Total net revenue generated by successful orders.
+
+  #     - name: avg_order_value
+
+  #       description: >
+  #         Average net revenue per successful order.
+
+  #       tests:
+  #         - dbt_expectations.expect_column_mean_to_be_between:
+  #             min_value: 0
+  #             max_value: 100000
+
+  #     - name: customer_segment
+  #       description: >
+  #         Customer segment based on the number of successful orders.
+
+  #     - name: days_since_last_order
+  #       description: >
+  #         Number of days since the customer's most recent order.
